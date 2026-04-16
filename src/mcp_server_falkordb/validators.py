@@ -1,8 +1,10 @@
 """Cypher query validation and graph name guards.
 
-Read-only enforcement: rejects write-Cypher keywords before the query
-reaches FalkorDB. Uses regex-based detection on the query text after
-stripping string literals to avoid false positives on keyword-in-string.
+Read-only enforcement: defense-in-depth that rejects obvious write-Cypher
+keywords client-side before sending the query to FalkorDB. The authoritative
+read-only gate is FalkorDB's ``ro_query`` mode (see client.py). This regex
+check catches obvious misuse before a round-trip — it is not a security
+boundary on its own.
 """
 
 from __future__ import annotations
@@ -65,7 +67,11 @@ def _strip_string_literals(query: str) -> str:
 
 
 def validate_read_only_query(query: str) -> None:
-    """Assert that *query* contains no write-Cypher keywords.
+    """Defense-in-depth: rejects obvious write queries client-side before sending.
+
+    The authoritative read-only gate is FalkorDB's ``ro_query`` mode
+    (see ``client.py``). This check catches obvious misuse early and avoids
+    a round-trip for clearly invalid queries.
 
     Raises:
         CypherWriteError: if a write keyword is detected, with a hint to use
