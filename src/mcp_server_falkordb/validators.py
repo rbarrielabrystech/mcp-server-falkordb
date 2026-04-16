@@ -53,16 +53,21 @@ _WRITE_PROCEDURE_PATTERN: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 
-# Pattern to strip single-quoted and double-quoted string literals from a query
-# so that keywords embedded in strings don't cause false positives.
+# Pattern to strip single-quoted, double-quoted, and backtick-quoted identifiers
+# from a query so that keywords embedded in strings/identifiers don't cause
+# false positives (e.g. MATCH (n:`CREATE`) RETURN n).
 _STRING_LITERAL_PATTERN: re.Pattern[str] = re.compile(
-    r"'[^'\\]*(?:\\.[^'\\]*)*'|\"[^\"\\]*(?:\\.[^\"\\]*)*\"",
+    r"'[^'\\]*(?:\\.[^'\\]*)*'|\"[^\"\\]*(?:\\.[^\"\\]*)*\"|`[^`\\]*(?:\\.[^`\\]*)*`",
     re.DOTALL,
 )
 
 
 def _strip_string_literals(query: str) -> str:
-    """Replace all string literals in *query* with empty placeholders."""
+    """Replace all string/identifier literals in *query* with empty placeholders.
+
+    Handles single-quoted strings, double-quoted strings, and backtick-quoted
+    Cypher identifiers (labels or property keys that happen to contain keywords).
+    """
     return _STRING_LITERAL_PATTERN.sub("''", query)
 
 

@@ -76,6 +76,18 @@ class TestReadOnlyQueryValidation:
         with pytest.raises(CypherWriteError):
             validate_read_only_query(query)
 
+    def test_backtick_label_containing_create_is_allowed(self) -> None:
+        """Label named CREATE (backtick-quoted) must not trigger rejection."""
+        validate_read_only_query("MATCH (n:`CREATE`) RETURN n")
+
+    def test_backtick_label_containing_delete_is_allowed(self) -> None:
+        """Label named DELETE (backtick-quoted) must not trigger rejection."""
+        validate_read_only_query("MATCH (n:`DELETE`) RETURN n")
+
+    def test_backtick_label_with_keyword_suffix_is_allowed(self) -> None:
+        """Label CREATE_COOL is a valid backtick-quoted identifier, not a write op."""
+        validate_read_only_query("MATCH (n:`CREATE_COOL`) RETURN n")
+
 
 class TestGraphNameValidation:
     """Graph name validation."""
