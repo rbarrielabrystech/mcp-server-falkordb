@@ -83,3 +83,32 @@ class TestGraphQueryIntegration:
         )
         text = format_query_result_markdown(result)
         assert "No results" in text
+
+    async def test_parameterized_query_returns_correct_results(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        """Passing params dict should filter results via Cypher parameter."""
+        conn = FalkorDBConnection(falkordb_client)
+        result = await conn.query_graph(
+            test_graph_name,
+            "MATCH (n:Person {name: $name}) RETURN n.name AS name",
+            params={"name": "Alice"},
+            read_only=True,
+        )
+        names = [row[0] for row in result.result_set]
+        assert names == ["Alice"]
+
+    async def test_parameterized_query_without_params_unchanged(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        """Without params, behaviour is identical to passing params=None."""
+        conn = FalkorDBConnection(falkordb_client)
+        result = await conn.query_graph(
+            test_graph_name,
+            "MATCH (n:Person) RETURN n.name ORDER BY n.name",
+            params=None,
+            read_only=True,
+        )
+        names = [row[0] for row in result.result_set]
+        assert "Alice" in names
+        assert "Bob" in names

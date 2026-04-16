@@ -156,6 +156,13 @@ class GraphQueryInput(BaseModel):
         min_length=1,
         max_length=4000,
     )
+    params: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Cypher parameters (optional). Use $name placeholders in the query string. "
+            "Example: params={'name': 'Alice'} with query='MATCH (n:Person {name: $name}) RETURN n'"
+        ),
+    )
     format: ResponseFormat = Field(
         default=ResponseFormat.MARKDOWN,
         description="Output format: 'markdown' table (default) or 'json' array.",
@@ -181,6 +188,14 @@ class GraphMutateInput(BaseModel):
         ),
         min_length=1,
         max_length=4000,
+    )
+    params: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Cypher parameters (optional). Use $name placeholders in the query string. "
+            "Example: params={'name': 'Alice', 'age': 30} with "
+            "query=\"CREATE (n:Person {name: $name, age: $age})\""
+        ),
     )
     format: ResponseFormat = Field(
         default=ResponseFormat.MARKDOWN,
@@ -440,7 +455,12 @@ async def graph_query(params: GraphQueryInput, ctx: Context) -> str:  # type: ig
         return str(e)
 
     try:
-        result = await _conn(ctx).query_graph(params.graph, params.query, read_only=True)
+        result = await _conn(ctx).query_graph(
+            params.graph,
+            params.query,
+            params=params.params,
+            read_only=True,
+        )
         if params.format == ResponseFormat.JSON:
             return format_query_result_json(result)
         return format_query_result_markdown(result)
@@ -505,7 +525,12 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
         return f"Error: {e}"
 
     try:
-        result = await _conn(ctx).query_graph(params.graph, params.query, read_only=False)
+        result = await _conn(ctx).query_graph(
+            params.graph,
+            params.query,
+            params=params.params,
+            read_only=False,
+        )
         stats = {
             "nodes_created": result.nodes_created,
             "nodes_deleted": result.nodes_deleted,
