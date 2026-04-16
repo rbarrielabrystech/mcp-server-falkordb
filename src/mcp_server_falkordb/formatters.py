@@ -67,7 +67,7 @@ def _cell_to_str(cell: Any) -> str:
 # ---------------------------------------------------------------------------
 
 
-def format_query_result_markdown(result: QueryResult, query: str = "") -> str:
+def format_query_result_markdown(result: QueryResult) -> str:
     """Format a QueryResult as a markdown table."""
     headers, rows = _result_to_rows(result)
 
