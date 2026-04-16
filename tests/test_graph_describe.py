@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import time
+import uuid
 
 import pytest
 from falkordb.asyncio import FalkorDB
 
 from mcp_server_falkordb.client import FalkorDBConnection
 from mcp_server_falkordb.formatters import format_schema_json, format_schema_markdown
+from mcp_server_falkordb.server import _fetch_schema
 
 
 async def _get_schema(conn: FalkorDBConnection, graph_name: str) -> dict:  # type: ignore[type-arg]
@@ -131,3 +134,35 @@ class TestGraphDescribeIntegration:
         data = json.loads(text)
         assert "Person" in data["labels"]
         assert "KNOWS" in data["relationship_types"]
+
+
+@pytest.mark.asyncio
+class TestFetchSchemaPerformance:
+    """Parallelised _fetch_schema should handle 20+ labels within 500ms locally."""
+
+    async def test_fetch_schema_20_labels_under_500ms(
+        self, falkordb_client: FalkorDB
+    ) -> None:
+        # Create a dense test graph with 20 distinct labels
+        name = f"_test_mcp_perf_{uuid.uuid4().hex[:8]}"
+        graph = falkordb_client.select_graph(name)
+
+        import contextlib
+
+        try:
+            # Seed 20 label types with one node each
+            for i in range(20):
+                await graph.query(f"CREATE (n:Label{i} {{id: {i}}})")
+
+            conn = FalkorDBConnection(falkordb_client)
+            start = time.monotonic()
+            labels, rel_types, prop_keys, node_counts, rel_counts = await _fetch_schema(
+                conn, name
+            )
+            elapsed = time.monotonic() - start
+
+            assert len(labels) == 20
+            assert elapsed < 0.5, f"_fetch_schema took {elapsed:.3f}s (limit 0.5s)"
+        finally:
+            with contextlib.suppress(Exception):
+                await graph.delete()
