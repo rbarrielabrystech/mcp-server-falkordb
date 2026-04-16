@@ -12,11 +12,13 @@ Tools:
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from enum import StrEnum
 from typing import Any
 
+import redis as redis_lib
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,6 +39,30 @@ from .validators import (
     validate_graph_name,
     validate_read_only_query,
 )
+
+# ---------------------------------------------------------------------------
+# Error helpers
+# ---------------------------------------------------------------------------
+
+# Patterns to strip from exception text before exposing to LLM clients.
+_PATH_PATTERN: re.Pattern[str] = re.compile(r"(/[\w./-]+)+")
+_CLASS_PATTERN: re.Pattern[str] = re.compile(r"\w+(?:\.\w+)+Error\b|\w+Exception\b")
+
+
+def _sanitize_error(exc: Exception) -> str:
+    """Return a short, safe user-facing string from *exc*.
+
+    Strips file paths and internal class names from the message to avoid
+    leaking implementation details to LLM clients while preserving the
+    actionable parts (e.g. Cypher syntax errors from FalkorDB).
+    """
+    raw = str(exc)
+    sanitised = _PATH_PATTERN.sub("<path>", raw)
+    sanitised = _CLASS_PATTERN.sub("<error>", sanitised)
+    # Collapse any whitespace runs created by substitution
+    sanitised = " ".join(sanitised.split())
+    return sanitised[:300]  # hard cap on length
+
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -290,8 +316,16 @@ async def graph_list(params: GraphListInput, ctx: Context) -> str:  # type: igno
         if params.format == ResponseFormat.JSON:
             return format_graph_list_json(graphs)
         return format_graph_list_markdown(graphs)
+    except redis_lib.ConnectionError as e:
+        return (
+            f"Error listing graphs: connection refused ({_sanitize_error(e)})\n"
+            f"Hint: Check that FalkorDB is running and accessible (default: localhost:6379)."
+        )
     except Exception as e:
-        return f"Error listing graphs: {e}\nHint: Check that FalkorDB is running and accessible."
+        return (
+            f"Error listing graphs: {_sanitize_error(e)}\n"
+            f"Hint: Check that FalkorDB is running and accessible."
+        )
 
 
 @mcp.tool(
@@ -341,9 +375,19 @@ async def graph_describe(params: GraphDescribeInput, ctx: Context) -> str:  # ty
         return format_schema_markdown(
             params.graph, labels, rel_types, prop_keys, node_counts, rel_counts
         )
+    except redis_lib.ConnectionError as e:
+        return (
+            f"Error describing graph '{params.graph}': connection refused ({_sanitize_error(e)})\n"
+            f"Hint: Check that FalkorDB is running and accessible."
+        )
+    except redis_lib.ResponseError as e:
+        return (
+            f"Error describing graph '{params.graph}': {_sanitize_error(e)}\n"
+            f"Hint: Run graph_list to verify the graph exists."
+        )
     except Exception as e:
         return (
-            f"Error describing graph '{params.graph}': {e}\n"
+            f"Error describing graph '{params.graph}': {_sanitize_error(e)}\n"
             f"Hint: Run graph_list to verify the graph exists."
         )
 
@@ -400,10 +444,21 @@ async def graph_query(params: GraphQueryInput, ctx: Context) -> str:  # type: ig
         if params.format == ResponseFormat.JSON:
             return format_query_result_json(result)
         return format_query_result_markdown(result)
+    except redis_lib.ConnectionError as e:
+        return (
+            f"Query error on '{params.graph}': connection refused ({_sanitize_error(e)})\n\n"
+            f"Hint: Check that FalkorDB is running and accessible."
+        )
+    except redis_lib.ResponseError as e:
+        return (
+            f"Query error on '{params.graph}': {_sanitize_error(e)}\n\n"
+            f"Hint: Try running graph_describe to see available labels and relationship types."
+        )
     except Exception as e:
-        err_str = str(e)
-        hint = "Try running graph_describe to see available labels and relationship types."
-        return f"Query error on '{params.graph}': {err_str}\n\nHint: {hint}"
+        return (
+            f"Query error on '{params.graph}': {_sanitize_error(e)}\n\n"
+            f"Hint: Try running graph_describe to see available labels and relationship types."
+        )
 
 
 @mcp.tool(
@@ -476,9 +531,19 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
             lines.append("_No changes made (query matched nothing or was a no-op)._")
         lines.append(f"\n_Execution: {result.run_time_ms:.2f} ms_")
         return "\n".join(lines)
+    except redis_lib.ConnectionError as e:
+        return (
+            f"Mutation error on '{params.graph}': connection refused ({_sanitize_error(e)})\n"
+            f"Hint: Check that FalkorDB is running and accessible."
+        )
+    except redis_lib.ResponseError as e:
+        return (
+            f"Mutation error on '{params.graph}': {_sanitize_error(e)}\n"
+            f"Hint: Run graph_describe to verify labels and relationship types exist."
+        )
     except Exception as e:
         return (
-            f"Mutation error on '{params.graph}': {e}\n"
+            f"Mutation error on '{params.graph}': {_sanitize_error(e)}\n"
             f"Hint: Run graph_describe to verify labels and relationship types exist."
         )
 
@@ -609,9 +674,19 @@ async def graph_explore(params: GraphExploreInput, ctx: Context) -> str:  # type
 
         result = "\n".join(lines)
         return _truncate(result)
+    except redis_lib.ConnectionError as e:
+        return (
+            f"Error exploring graph '{params.graph}': connection refused ({_sanitize_error(e)})\n"
+            f"Hint: Check that FalkorDB is running and accessible."
+        )
+    except redis_lib.ResponseError as e:
+        return (
+            f"Error exploring graph '{params.graph}': {_sanitize_error(e)}\n"
+            f"Hint: Run graph_list to verify the graph name is correct."
+        )
     except Exception as e:
         return (
-            f"Error exploring graph '{params.graph}': {e}\n"
+            f"Error exploring graph '{params.graph}': {_sanitize_error(e)}\n"
             f"Hint: Run graph_list to verify the graph name is correct."
         )
 
@@ -665,8 +740,13 @@ async def graph_delete(params: GraphDeleteInput, ctx: Context) -> str:  # type: 
     try:
         await _conn(ctx).delete_graph(params.graph)
         return f"Graph '{params.graph}' has been permanently deleted."
+    except redis_lib.ResponseError as e:
+        return (
+            f"Error deleting graph '{params.graph}': {_sanitize_error(e)}\n"
+            f"Hint: Run graph_list to verify the graph name exists."
+        )
     except Exception as e:
         return (
-            f"Error deleting graph '{params.graph}': {e}\n"
+            f"Error deleting graph '{params.graph}': {_sanitize_error(e)}\n"
             f"Hint: Run graph_list to verify the graph name exists."
         )
