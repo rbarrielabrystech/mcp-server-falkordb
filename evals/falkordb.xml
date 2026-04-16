@@ -9,11 +9,11 @@
                  fastapi-expert (23), test-writer (5)
     Skill nodes: test-driven-development (150 uses), code-review (89), dependency-check (34),
                  mcp-builder (12), diagram (7)
-    Project nodes: managed-agents (python), obsidian-app (dart), mcp-server-falkordb (python)
+    Project nodes: alpha-service (python), beta-frontend (dart), gamma-tools (python)
     USES relationships: python-pro->test-driven-development, python-pro->code-review,
                         security-auditor->dependency-check, fastapi-expert->test-driven-development
-    WORKS_ON relationships: python-pro->managed-agents, security-auditor->managed-agents,
-                            test-writer->obsidian-app
+    WORKS_ON relationships: python-pro->alpha-service, security-auditor->alpha-service,
+                            test-writer->beta-frontend
 -->
 <evaluation>
 
@@ -61,8 +61,8 @@
 
   <qa_pair>
     <question>
-      Using the eval_data graph, how many Agent nodes work on the project named 'managed-agents'?
-      Run MATCH (a:Agent)-[:WORKS_ON]->(p:Project {name:'managed-agents'}) RETURN count(a).
+      Using the eval_data graph, how many Agent nodes work on the project named 'alpha-service'?
+      Run MATCH (a:Agent)-[:WORKS_ON]->(p:Project {name:'alpha-service'}) RETURN count(a).
     </question>
     <answer>2</answer>
   </qa_pair>

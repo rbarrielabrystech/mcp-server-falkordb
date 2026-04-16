@@ -146,7 +146,7 @@ def format_graph_list_markdown(graphs: list[str]) -> str:
     for name in graphs:
         lines.append(f"- `{name}`")
     lines.append(f"\n_Total: {len(graphs)} graph(s)_")
-    return "\n".join(lines)
+    return _truncate("\n".join(lines))
 
 
 def format_graph_list_json(graphs: list[str]) -> str:
@@ -190,7 +190,7 @@ def format_schema_markdown(
     else:
         lines.append("_No property keys defined._")
 
-    return "\n".join(lines)
+    return _truncate("\n".join(lines))
 
 
 def format_schema_json(

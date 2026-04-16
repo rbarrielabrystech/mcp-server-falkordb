@@ -23,10 +23,14 @@ def event_loop_policy() -> None:
 
 
 @pytest.fixture
-async def falkordb_client() -> FalkorDB:
-    """Return a connected async FalkorDB client."""
+async def falkordb_client():  # type: ignore[return]
+    """Return a connected async FalkorDB client; closes connection on teardown."""
+    import contextlib
+
     db = FalkorDB(host=TEST_HOST, port=TEST_PORT)
-    return db
+    yield db
+    with contextlib.suppress(Exception):
+        await db.aclose()
 
 
 @pytest.fixture
@@ -40,9 +44,7 @@ async def test_graph_name(falkordb_client: FalkorDB):  # type: ignore[type-arg]
     await graph.query(
         "CREATE (:Person {name: 'Alice', age: 30})-[:KNOWS]->(:Person {name: 'Bob', age: 25})"
     )
-    await graph.query(
-        "CREATE (:City {name: 'London', population: 9000000})"
-    )
+    await graph.query("CREATE (:City {name: 'London', population: 9000000})")
     await graph.query(
         "MATCH (a:Person {name:'Alice'}), (c:City {name:'London'}) CREATE (a)-[:LIVES_IN]->(c)"
     )

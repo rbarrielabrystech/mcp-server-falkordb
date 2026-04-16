@@ -12,13 +12,12 @@ from mcp_server_falkordb.client import FalkorDBConnection
 
 @pytest.mark.asyncio
 class TestGraphDeleteIntegration:
-    async def test_delete_removes_graph(self) -> None:
+    async def test_delete_removes_graph(self, falkordb_client: FalkorDB) -> None:
         """Create an ephemeral graph, delete it, confirm it's gone."""
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+        conn = FalkorDBConnection(falkordb_client)
 
         name = f"_test_mcp_del_{uuid.uuid4().hex[:8]}"
-        graph = db.select_graph(name)
+        graph = falkordb_client.select_graph(name)
         await graph.query("CREATE (n:Temp)")
 
         graphs_before = await conn.list_graphs()
@@ -29,11 +28,10 @@ class TestGraphDeleteIntegration:
         graphs_after = await conn.list_graphs()
         assert name not in graphs_after
 
-    async def test_delete_nonexistent_graph_raises(self) -> None:
+    async def test_delete_nonexistent_graph_raises(self, falkordb_client: FalkorDB) -> None:
         """Deleting a graph that doesn't exist should raise an error."""
         from redis import ResponseError
 
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+        conn = FalkorDBConnection(falkordb_client)
         with pytest.raises(ResponseError):
             await conn.delete_graph("_test_mcp_nonexistent_should_not_exist_xyz")

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from falkordb.asyncio import FalkorDB
 
@@ -51,27 +53,57 @@ async def _explore_graph(conn: FalkorDBConnection, graph_name: str) -> dict:  # 
 
 @pytest.mark.asyncio
 class TestGraphExploreIntegration:
-    async def test_explore_returns_labels(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_explore_returns_labels(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         info = await _explore_graph(conn, test_graph_name)
         assert len(info["labels"]) >= 2
         assert "Person" in info["labels"]
 
-    async def test_explore_returns_sample_nodes(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_explore_returns_sample_nodes(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         info = await _explore_graph(conn, test_graph_name)
         assert len(info["sample_nodes"]) >= 1
 
-    async def test_explore_returns_sample_edges(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_explore_returns_sample_edges(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         info = await _explore_graph(conn, test_graph_name)
         assert len(info["sample_edges"]) >= 1
 
-    async def test_explore_returns_rel_types(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_explore_returns_rel_types(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         info = await _explore_graph(conn, test_graph_name)
         assert "KNOWS" in info["rel_types"]
+
+    async def test_explore_json_format_structure(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        """Explore JSON output has schema, sample_nodes, and sample_edges keys."""
+        conn = FalkorDBConnection(falkordb_client)
+        info = await _explore_graph(conn, test_graph_name)
+
+        # Simulate JSON payload structure matching server.py graph_explore
+        payload = {
+            "graph": test_graph_name,
+            "schema": {
+                "labels": sorted(info["labels"]),
+                "relationship_types": sorted(info["rel_types"]),
+            },
+            "sample_nodes": [{"raw": str(n)} for n in info["sample_nodes"]],
+            "sample_edges": [{"raw": str(e)} for e in info["sample_edges"]],
+        }
+        text = json.dumps(payload, indent=2, default=str)
+        parsed = json.loads(text)
+
+        assert parsed["graph"] == test_graph_name
+        assert "schema" in parsed
+        assert "Person" in parsed["schema"]["labels"]
+        assert len(parsed["sample_nodes"]) >= 1
+        assert len(parsed["sample_edges"]) >= 1

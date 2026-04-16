@@ -23,10 +23,49 @@ MCP server for [FalkorDB](https://falkordb.com/) — a property graph database b
 ### Requirements
 
 - Python 3.12+
-- `uv` package manager
 - Running FalkorDB instance (default: `localhost:6379`)
 
-### Local (rmcp-mux)
+### Claude Desktop / Claude Code (uvx — recommended)
+
+Add to your `claude_desktop_config.json` (or Claude Code MCP config):
+
+```json
+{
+  "mcpServers": {
+    "falkordb": {
+      "command": "uvx",
+      "args": ["mcp-server-falkordb"],
+      "env": {
+        "FALKORDB_HOST": "localhost",
+        "FALKORDB_PORT": "6379"
+      }
+    }
+  }
+}
+```
+
+Or add via CLI:
+```bash
+claude mcp add falkordb -- uvx mcp-server-falkordb
+```
+
+### pip
+
+```bash
+pip install mcp-server-falkordb
+mcp-server-falkordb   # starts on stdio
+```
+
+### From source
+
+```bash
+git clone https://github.com/labrystechnology/mcp-server-falkordb
+cd mcp-server-falkordb
+uv run mcp-server-falkordb
+```
+
+<details>
+<summary>Advanced: rmcp-mux (Labrys-internal multiplexer)</summary>
 
 1. Add to `~/dev/mcp-mux-daemon/mux.toml`:
 
@@ -34,32 +73,19 @@ MCP server for [FalkorDB](https://falkordb.com/) — a property graph database b
 [servers.falkordb-hive]
 socket = "~/mcp-sockets/falkordb-hive.sock"
 cmd = "uv"
-args = ["--directory", "/Users/rob/dev/tools/mcp-server-falkordb", "run", "mcp-server-falkordb"]
+args = ["--directory", "/path/to/mcp-server-falkordb", "run", "mcp-server-falkordb"]
 env = { FALKORDB_HOST = "localhost", FALKORDB_PORT = "6379" }
 lazy_start = true
 max_restarts = 20
 ```
 
-2. Restart the mux daemon:
+2. Restart the mux daemon and register:
 ```bash
 launchctl kickstart -k gui/$(id -u)/com.labrys.mcp-mux
-```
-
-3. Add to Claude Code:
-```bash
 claude mcp add --scope user falkordb-hive -- rmcp-mux-proxy --socket ~/mcp-sockets/falkordb-hive.sock
 ```
 
-4. Verify:
-```bash
-claude mcp list | grep falkordb-hive
-```
-
-### Direct (without rmcp-mux)
-
-```bash
-uv --directory /path/to/mcp-server-falkordb run mcp-server-falkordb
-```
+</details>
 
 ## Configuration
 

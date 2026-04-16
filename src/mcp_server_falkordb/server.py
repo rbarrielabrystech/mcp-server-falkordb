@@ -125,7 +125,7 @@ class GraphQueryInput(BaseModel):
             "Read-only Cypher query (MATCH, RETURN, CALL db.*, etc.). "
             "Write keywords (CREATE, DELETE, SET, MERGE, REMOVE, DROP) are rejected — "
             "use graph_mutate for writes. Example: "
-            "\"MATCH (n:Person) RETURN n.name LIMIT 10\""
+            '"MATCH (n:Person) RETURN n.name LIMIT 10"'
         ),
         min_length=1,
         max_length=4000,
@@ -156,6 +156,10 @@ class GraphMutateInput(BaseModel):
         min_length=1,
         max_length=4000,
     )
+    format: ResponseFormat = Field(
+        default=ResponseFormat.MARKDOWN,
+        description="Output format: 'markdown' (default) or 'json'.",
+    )
 
 
 class GraphExploreInput(BaseModel):
@@ -168,6 +172,10 @@ class GraphExploreInput(BaseModel):
         description="Name of the graph to explore (e.g. 'hive_hive').",
         min_length=1,
         max_length=200,
+    )
+    format: ResponseFormat = Field(
+        default=ResponseFormat.MARKDOWN,
+        description="Output format: 'markdown' (default) or 'json'.",
     )
 
 
@@ -388,9 +396,7 @@ async def graph_query(params: GraphQueryInput, ctx: Context) -> str:  # type: ig
         return str(e)
 
     try:
-        result = await _conn(ctx).query_graph(
-            params.graph, params.query, read_only=True
-        )
+        result = await _conn(ctx).query_graph(params.graph, params.query, read_only=True)
         if params.format == ResponseFormat.JSON:
             return format_query_result_json(result)
         return format_query_result_markdown(result)
@@ -423,6 +429,7 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
         params (GraphMutateInput):
             - graph (str): Graph name (e.g. 'hive_hive')
             - query (str): Write Cypher query
+            - format: 'markdown' (default) or 'json'
 
     Returns:
         str: Mutation statistics: nodes created/deleted, relationships
@@ -443,9 +450,7 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
         return f"Error: {e}"
 
     try:
-        result = await _conn(ctx).query_graph(
-            params.graph, params.query, read_only=False
-        )
+        result = await _conn(ctx).query_graph(params.graph, params.query, read_only=False)
         stats = {
             "nodes_created": result.nodes_created,
             "nodes_deleted": result.nodes_deleted,
@@ -456,6 +461,13 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
             "labels_added": result.labels_added,
             "execution_ms": result.run_time_ms,
         }
+
+        if params.format == ResponseFormat.JSON:
+            return json.dumps(
+                {"graph": params.graph, "mutation": stats},
+                indent=2,
+            )
+
         lines = [f"# Mutation complete on `{params.graph}`", ""]
         for k, v in stats.items():
             if v:
@@ -484,17 +496,18 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
 async def graph_explore(params: GraphExploreInput, ctx: Context) -> str:  # type: ignore[type-arg]
     """One-call overview of a graph: schema + sample nodes + sample edges.
 
-    Combines graph_describe with 3 sample nodes (one per label) and 3 sample
-    edges. The ideal starting point when exploring an unfamiliar graph.
+    Combines graph_describe with up to 3 sample nodes (any labels) and up to 3
+    sample edges. The ideal starting point when exploring an unfamiliar graph.
 
     Args:
         params (GraphExploreInput):
             - graph (str): Graph name (e.g. 'hive_hive')
+            - format: 'markdown' (default) or 'json'
 
     Returns:
         str: Markdown overview with:
              - Node labels, relationship types, property keys with counts
-             - Up to 3 sample nodes (one per label where possible)
+             - Up to 3 sample nodes (any labels, global LIMIT 3)
              - Up to 3 sample edges
 
     Examples:
@@ -529,31 +542,66 @@ async def graph_explore(params: GraphExploreInput, ctx: Context) -> str:  # type
         r = await conn.query_graph(params.graph, _edge_q, read_only=True)
         sample_edges = r.result_set or []
 
-        # Build output
+        # Convert sample data to serialisable form for both formats
+        node_dicts: list[dict[str, Any]] = []
+        for row in sample_nodes:
+            node = row[0]
+            if hasattr(node, "properties") and hasattr(node, "labels"):
+                node_dicts.append(
+                    {
+                        "labels": list(node.labels),
+                        "properties": dict(node.properties),
+                    }
+                )
+            else:
+                node_dicts.append({"raw": str(node)})
+
+        edge_dicts: list[dict[str, str]] = []
+        for row in sample_edges:
+            edge_dicts.append(
+                {
+                    "type": row[0] if row else "?",
+                    "from": row[1] if len(row) > 1 else "?",
+                    "to": row[2] if len(row) > 2 else "?",
+                }
+            )
+
+        if params.format == ResponseFormat.JSON:
+            payload = {
+                "graph": params.graph,
+                "schema": {
+                    "labels": sorted(labels),
+                    "relationship_types": sorted(rel_types),
+                    "property_keys": sorted(prop_keys),
+                    "node_counts_by_label": node_counts,
+                    "rel_counts_by_type": rel_counts,
+                },
+                "sample_nodes": node_dicts,
+                "sample_edges": edge_dicts,
+            }
+            return _truncate(json.dumps(payload, indent=2, default=str))
+
+        # Build markdown output
         schema_text = format_schema_markdown(
             params.graph, labels, rel_types, prop_keys, node_counts, rel_counts
         )
 
         lines = [schema_text, "", "---", "", "## Sample Nodes (up to 3)", ""]
-        if sample_nodes:
-            for row in sample_nodes:
-                node = row[0]
-                if hasattr(node, "properties") and hasattr(node, "labels"):
-                    label_str = ":".join(node.labels)
-                    props = json.dumps(dict(node.properties), default=str)
-                    lines.append(f"- `(:{label_str})` → {props}")
+        if node_dicts:
+            for nd in node_dicts:
+                if "labels" in nd:
+                    label_str = ":".join(nd["labels"])
+                    props = json.dumps(nd["properties"], default=str)
+                    lines.append(f"- `(:{label_str})` \u2192 {props}")
                 else:
-                    lines.append(f"- {node}")
+                    lines.append(f"- {nd['raw']}")
         else:
             lines.append("_No nodes found._")
 
         lines += ["", "## Sample Edges (up to 3)", ""]
-        if sample_edges:
-            for row in sample_edges:
-                rel_type = row[0] if row else "?"
-                from_name = row[1] if len(row) > 1 else "?"
-                to_name = row[2] if len(row) > 2 else "?"
-                lines.append(f"- `({from_name})-[:{rel_type}]->({to_name})`")
+        if edge_dicts:
+            for ed in edge_dicts:
+                lines.append(f"- `({ed['from']})-[:{ed['type']}]->({ed['to']})`")
         else:
             lines.append("_No edges found._")
 

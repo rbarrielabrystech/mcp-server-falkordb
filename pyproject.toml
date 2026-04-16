@@ -6,11 +6,27 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Labrys Technology", email = "rob@labrys.tech" }]
-keywords = ["mcp", "falkordb", "graph", "cypher", "llm"]
+keywords = ["mcp", "falkordb", "graph-database", "cypher", "anthropic", "claude", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "falkordb>=1.6.0",
     "mcp[cli]>=1.27.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/labrystechnology/mcp-server-falkordb"
+Repository = "https://github.com/labrystechnology/mcp-server-falkordb"
+Issues = "https://github.com/labrystechnology/mcp-server-falkordb/issues"
 
 [project.scripts]
 mcp-server-falkordb = "mcp_server_falkordb.__main__:main"
@@ -26,6 +42,14 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/mcp_server_falkordb/",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_server_falkordb"]

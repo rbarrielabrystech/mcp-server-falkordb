@@ -17,9 +17,10 @@ from mcp_server_falkordb.validators import CypherWriteError, validate_read_only_
 
 @pytest.mark.asyncio
 class TestGraphQueryIntegration:
-    async def test_simple_match_returns_results(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_simple_match_returns_results(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         result = await conn.query_graph(
             test_graph_name,
             "MATCH (n:Person) RETURN n.name ORDER BY n.name",
@@ -29,9 +30,8 @@ class TestGraphQueryIntegration:
         assert "Alice" in names
         assert "Bob" in names
 
-    async def test_count_query(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_count_query(self, falkordb_client: FalkorDB, test_graph_name: str) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         result = await conn.query_graph(
             test_graph_name,
             "MATCH (n) RETURN count(n) as total",
@@ -44,9 +44,10 @@ class TestGraphQueryIntegration:
         with pytest.raises(CypherWriteError):
             validate_read_only_query("CREATE (n:Spy {name: 'Eve'})")
 
-    async def test_markdown_format_has_table(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_markdown_format_has_table(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         result = await conn.query_graph(
             test_graph_name,
             "MATCH (n:Person) RETURN n.name",
@@ -56,9 +57,10 @@ class TestGraphQueryIntegration:
         assert "Alice" in text
         assert "|" in text  # markdown table
 
-    async def test_json_format_has_rows(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_json_format_has_rows(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         result = await conn.query_graph(
             test_graph_name,
             "MATCH (n:Person) RETURN n.name AS name",
@@ -71,10 +73,9 @@ class TestGraphQueryIntegration:
         assert "Alice" in names
 
     async def test_empty_result_returns_no_results_message(
-        self, test_graph_name: str
+        self, falkordb_client: FalkorDB, test_graph_name: str
     ) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+        conn = FalkorDBConnection(falkordb_client)
         result = await conn.query_graph(
             test_graph_name,
             "MATCH (n:NonExistentLabel) RETURN n",

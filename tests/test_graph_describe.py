@@ -68,36 +68,39 @@ async def _get_schema(conn: FalkorDBConnection, graph_name: str) -> dict:  # typ
 
 @pytest.mark.asyncio
 class TestGraphDescribeIntegration:
-    async def test_labels_detected(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_labels_detected(self, falkordb_client: FalkorDB, test_graph_name: str) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         schema = await _get_schema(conn, test_graph_name)
         assert "Person" in schema["labels"]
         assert "City" in schema["labels"]
 
-    async def test_relationship_types_detected(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_relationship_types_detected(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         schema = await _get_schema(conn, test_graph_name)
         assert "KNOWS" in schema["rel_types"]
         assert "LIVES_IN" in schema["rel_types"]
 
-    async def test_property_keys_detected(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_property_keys_detected(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         schema = await _get_schema(conn, test_graph_name)
         assert "name" in schema["prop_keys"]
 
-    async def test_node_counts_correct(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_node_counts_correct(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         schema = await _get_schema(conn, test_graph_name)
         assert schema["node_counts"].get("Person", 0) == 2
         assert schema["node_counts"].get("City", 0) == 1
 
-    async def test_schema_markdown_format(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_schema_markdown_format(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         schema = await _get_schema(conn, test_graph_name)
         text = format_schema_markdown(
             test_graph_name,
@@ -112,9 +115,10 @@ class TestGraphDescribeIntegration:
         assert "name" in text
         assert "Schema:" in text
 
-    async def test_schema_json_format(self, test_graph_name: str) -> None:
-        db = FalkorDB(host="localhost", port=6379)
-        conn = FalkorDBConnection(db)
+    async def test_schema_json_format(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
+        conn = FalkorDBConnection(falkordb_client)
         schema = await _get_schema(conn, test_graph_name)
         text = format_schema_json(
             test_graph_name,
