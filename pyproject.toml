@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Rob Barrie" }]
-keywords = ["mcp", "falkordb", "graph-database", "cypher", "anthropic", "claude", "llm"]
+keywords = ["mcp", "falkordb", "graph-database", "cypher", "anthropic", "claude", "llm", "knowledge-graph", "model-context-protocol", "redis-graph"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

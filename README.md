@@ -1,5 +1,7 @@
 # mcp-server-falkordb
 
+`mcp-server-falkordb` connects LLM agents (Claude, any MCP client) to a running FalkorDB instance. FalkorDB is a property graph database built on Redis — store data as nodes + relationships, query with Cypher. This server exposes 6 tools covering graph discovery, read queries, writes, and schema inspection.
+
 MCP server for [FalkorDB](https://falkordb.com/) — a property graph database built on Redis. Exposes 6 agent-centric tools for graph query, schema inspection, and management.
 
 ## Tools
@@ -49,6 +51,13 @@ Or add via CLI:
 claude mcp add falkordb -- uvx mcp-server-falkordb
 ```
 
+To specify a custom host/port via CLI:
+```bash
+claude mcp add falkordb --env FALKORDB_HOST=localhost --env FALKORDB_PORT=6379 -- uvx mcp-server-falkordb
+```
+
+If `FALKORDB_HOST` and `FALKORDB_PORT` are omitted, they default to `localhost:6379`.
+
 ### pip
 
 ```bash
@@ -65,7 +74,7 @@ uv run mcp-server-falkordb
 ```
 
 <details>
-<summary>Advanced: rmcp-mux (Labrys-internal multiplexer)</summary>
+<summary>Advanced: custom MCP multiplexer (rmcp-mux)</summary>
 
 1. Add to `~/dev/mcp-mux-daemon/mux.toml`:
 
@@ -102,7 +111,7 @@ Environment variables:
 ### Explore a graph
 
 ```
-graph_explore(graph="hive_hive")
+graph_explore(graph="my_graph")
 ```
 
 Returns labels, relationship types, property keys with counts, plus sample nodes and edges.
@@ -111,7 +120,7 @@ Returns labels, relationship types, property keys with counts, plus sample nodes
 
 ```
 graph_query(
-  graph="hive_hive",
+  graph="my_graph",
   query="MATCH (n:Memory) RETURN n.content LIMIT 10"
 )
 ```
@@ -122,7 +131,7 @@ Write keywords (CREATE, DELETE, SET, MERGE, REMOVE, DROP) are rejected — use `
 
 ```
 graph_mutate(
-  graph="hive_hive",
+  graph="my_graph",
   query="CREATE (n:Note {content: 'Remember this', created: '2026-04-15'})"
 )
 ```
@@ -151,6 +160,33 @@ All listing and query tools support `format: "markdown"` (default) or `format: "
 3. Checks for write/admin `CALL db.*` procedures
 
 If a write keyword is detected, the error message explicitly directs to `graph_mutate`.
+
+## Troubleshooting
+
+### FalkorDB not running
+
+**Symptom**: first tool call returns a connection refused error.
+
+**Fix**: start FalkorDB with Docker:
+```bash
+docker run -p 6379:6379 falkordb/falkordb
+```
+
+### Wrong host or port
+
+Set `FALKORDB_HOST` and `FALKORDB_PORT` environment variables (see [Configuration](#configuration) above).
+
+### Password-protected FalkorDB
+
+Set `FALKORDB_PASSWORD` to your Redis AUTH password. The server passes it transparently to the FalkorDB client.
+
+### Graph name with special characters
+
+FalkorDB graph names support alphanumeric characters, underscores (`_`), and hyphens (`-`). Names with other special characters will be rejected with a `GraphNameError` before the query reaches the database.
+
+### Large result sets
+
+All tools truncate responses at 25,000 characters and append a notice. Add a `LIMIT` clause to your Cypher query or use the `format: "json"` output to reduce payload size.
 
 ## Development
 

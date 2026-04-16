@@ -5,7 +5,7 @@ Tools:
     graph_describe  — full schema of one graph (read-only)
     graph_query     — read-only Cypher query with write-keyword enforcement
     graph_mutate    — write Cypher query (destructive)
-    graph_explore   — one-call "quick look" combining describe + samples
+    graph_explore   — one-call full overview: describe + samples (heavier than graph_describe)
     graph_delete    — drop an entire graph (requires confirm=True, destructive)
 """
 
@@ -98,7 +98,7 @@ class GraphDescribeInput(BaseModel):
 
     graph: str = Field(
         ...,
-        description="Name of the graph to describe (e.g. 'hive_hive').",
+        description="Name of the graph to describe (e.g. 'my_graph').",
         min_length=1,
         max_length=200,
     )
@@ -115,7 +115,7 @@ class GraphQueryInput(BaseModel):
 
     graph: str = Field(
         ...,
-        description="Name of the graph to query (e.g. 'hive_hive').",
+        description="Name of the graph to query (e.g. 'my_graph').",
         min_length=1,
         max_length=200,
     )
@@ -143,7 +143,7 @@ class GraphMutateInput(BaseModel):
 
     graph: str = Field(
         ...,
-        description="Name of the graph to mutate (e.g. 'hive_hive').",
+        description="Name of the graph to mutate (e.g. 'my_graph').",
         min_length=1,
         max_length=200,
     )
@@ -169,7 +169,7 @@ class GraphExploreInput(BaseModel):
 
     graph: str = Field(
         ...,
-        description="Name of the graph to explore (e.g. 'hive_hive').",
+        description="Name of the graph to explore (e.g. 'my_graph').",
         min_length=1,
         max_length=200,
     )
@@ -313,7 +313,7 @@ async def graph_describe(params: GraphDescribeInput, ctx: Context) -> str:  # ty
 
     Args:
         params (GraphDescribeInput):
-            - graph (str): Graph name (e.g. 'hive_hive')
+            - graph (str): Graph name (e.g. 'my_graph')
             - format: 'markdown' (default) or 'json'
 
     Returns:
@@ -321,7 +321,7 @@ async def graph_describe(params: GraphDescribeInput, ctx: Context) -> str:  # ty
              and counts per label/type.
 
     Examples:
-        - Use when: "What node labels does the hive_hive graph have?"
+        - Use when: "What node labels does the my_graph graph have?"
         - Use when: "Show me the schema for the knowledge graph"
         - Don't use when: You want sample nodes too — use graph_explore
     """
@@ -366,7 +366,7 @@ async def graph_query(params: GraphQueryInput, ctx: Context) -> str:  # type: ig
 
     Args:
         params (GraphQueryInput):
-            - graph (str): Graph name (e.g. 'hive_hive')
+            - graph (str): Graph name (e.g. 'my_graph')
             - query (str): Read-only Cypher query
             - format: 'markdown' table (default) or 'json'
 
@@ -427,7 +427,7 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
 
     Args:
         params (GraphMutateInput):
-            - graph (str): Graph name (e.g. 'hive_hive')
+            - graph (str): Graph name (e.g. 'my_graph')
             - query (str): Write Cypher query
             - format: 'markdown' (default) or 'json'
 
@@ -501,7 +501,7 @@ async def graph_explore(params: GraphExploreInput, ctx: Context) -> str:  # type
 
     Args:
         params (GraphExploreInput):
-            - graph (str): Graph name (e.g. 'hive_hive')
+            - graph (str): Graph name (e.g. 'my_graph')
             - format: 'markdown' (default) or 'json'
 
     Returns:
@@ -511,7 +511,7 @@ async def graph_explore(params: GraphExploreInput, ctx: Context) -> str:  # type
              - Up to 3 sample edges
 
     Examples:
-        - Use when: "What's in the hive_hive graph?" (first look)
+        - Use when: "What's in the my_graph graph?" (first look)
         - Use when: "Explore the knowledge graph before writing queries"
         - Use graph_query afterward to dig deeper
     """
