@@ -89,6 +89,38 @@ class TestReadOnlyQueryValidation:
         validate_read_only_query("MATCH (n:`CREATE_COOL`) RETURN n")
 
 
+class TestReadOnlyQueryBypassEdgeCases:
+    """Attempts to sneak write operations past the validator."""
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "/* comment */ CREATE (n:Foo)",
+            "CREATE (n:Foo) // trailing comment",
+            "MATCH (n) RETURN n; CREATE (m:Foo)",
+            "CALL db.createIndex('Person', ['age'])",
+            "CreAte (n:Foo)",
+            "DeLeTe (n)",
+            "mErGe (n:Foo {id: 1})",
+        ],
+    )
+    def test_bypass_attempts_are_rejected(self, query: str) -> None:
+        with pytest.raises(CypherWriteError):
+            validate_read_only_query(query)
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            # Backtick-quoted label that looks like a write keyword — must be ACCEPTED
+            "MATCH (n:`CREATE_COOL`) RETURN n",
+            "MATCH (n:`DELETE_ME`) RETURN n",
+        ],
+    )
+    def test_backtick_keyword_labels_are_accepted(self, query: str) -> None:
+        """Backtick-quoted identifiers containing write keywords must not be rejected."""
+        validate_read_only_query(query)
+
+
 class TestGraphNameValidation:
     """Graph name validation."""
 
