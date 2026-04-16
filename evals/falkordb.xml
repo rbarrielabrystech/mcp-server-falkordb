@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FalkorDB MCP Server Evaluations
+  Graph: eval_data (seeded at install time — see evals/README below)
+  All questions are read-only, independent, and verifiable.
+
+  Seed data summary (13 nodes, 7 relationships):
+    Agent nodes: python-pro (42 tasks), security-auditor (17), database-optimizer (8),
+                 fastapi-expert (23), test-writer (5)
+    Skill nodes: test-driven-development (150 uses), code-review (89), dependency-check (34),
+                 mcp-builder (12), diagram (7)
+    Project nodes: alpha-service (python), beta-frontend (dart), gamma-tools (python)
+    USES relationships: python-pro->test-driven-development, python-pro->code-review,
+                        security-auditor->dependency-check, fastapi-expert->test-driven-development
+    WORKS_ON relationships: python-pro->alpha-service, security-auditor->alpha-service,
+                            test-writer->beta-frontend
+-->
+<evaluation>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, how many nodes exist in total? Use graph_query with a
+      MATCH (n) RETURN count(n) query to find out.
+    </question>
+    <answer>13</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, how many relationships (edges) exist in total?
+      Run MATCH ()-[r]->() RETURN count(r) to find out.
+    </question>
+    <answer>7</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, how many Agent nodes have status='active'?
+      Run MATCH (a:Agent) WHERE a.status='active' RETURN count(a).
+    </question>
+    <answer>4</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, which Agent node has the highest number of tasks?
+      Run MATCH (a:Agent) RETURN a.name, a.tasks ORDER BY a.tasks DESC LIMIT 1
+      and return the agent name.
+    </question>
+    <answer>python-pro</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, what is the name of the Skill node with the most uses?
+      Run MATCH (s:Skill) RETURN s.name, s.uses ORDER BY s.uses DESC LIMIT 1
+      and return the skill name.
+    </question>
+    <answer>test-driven-development</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, how many Agent nodes work on the project named 'alpha-service'?
+      Run MATCH (a:Agent)-[:WORKS_ON]->(p:Project {name:'alpha-service'}) RETURN count(a).
+    </question>
+    <answer>2</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, which Agent node has status='inactive'?
+      Run MATCH (a:Agent {status:'inactive'}) RETURN a.name and return the agent name.
+    </question>
+    <answer>test-writer</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, what is the total sum of all task counts across all Agent nodes?
+      Run MATCH (a:Agent) RETURN sum(a.tasks) AS total and return the number.
+    </question>
+    <answer>95</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, which Agent node uses the most Skill nodes (has the most
+      outgoing USES relationships)? Run
+      MATCH (a:Agent)-[:USES]->(s:Skill) RETURN a.name, count(s) AS skill_count
+      ORDER BY skill_count DESC LIMIT 1 and return the agent name.
+    </question>
+    <answer>python-pro</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>
+      Using the eval_data graph, list all distinct node labels. Use graph_describe or
+      CALL db.labels() YIELD label RETURN label ORDER BY label. How many distinct node
+      labels exist? Return the count as a number.
+    </question>
+    <answer>3</answer>
+  </qa_pair>
+
+</evaluation>
