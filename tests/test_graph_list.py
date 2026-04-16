@@ -41,12 +41,14 @@ class TestGraphListFormatters:
 class TestGraphListIntegration:
     """Hit the real FalkorDB."""
 
-    async def test_list_graphs_returns_list(self, falkordb_client: FalkorDB) -> None:
+    async def test_list_graphs_returns_list(
+        self, falkordb_client: FalkorDB, test_graph_name: str
+    ) -> None:
         conn = FalkorDBConnection(falkordb_client)
         graphs = await conn.list_graphs()
         assert isinstance(graphs, list)
-        # At minimum the hive graphs exist
-        assert any("hive" in g for g in graphs)
+        # The ephemeral test graph must appear
+        assert test_graph_name in graphs
 
     async def test_list_graphs_does_not_include_test_prefix_by_default(
         self, falkordb_client: FalkorDB, test_graph_name: str
