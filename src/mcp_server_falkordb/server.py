@@ -486,7 +486,7 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
 @mcp.tool(
     name="graph_explore",
     annotations=ToolAnnotations(
-        title="Explore FalkorDB Graph (Quick Look)",
+        title="Explore FalkorDB Graph (Full Overview)",
         readOnlyHint=True,
         destructiveHint=False,
         idempotentHint=True,
@@ -494,10 +494,12 @@ async def graph_mutate(params: GraphMutateInput, ctx: Context) -> str:  # type: 
     ),
 )
 async def graph_explore(params: GraphExploreInput, ctx: Context) -> str:  # type: ignore[type-arg]
-    """One-call overview of a graph: schema + sample nodes + sample edges.
+    """Combines schema + samples + counts in one call (heavier than graph_describe).
 
-    Combines graph_describe with up to 3 sample nodes (any labels) and up to 3
-    sample edges. The ideal starting point when exploring an unfamiliar graph.
+    Issues 6+ Cypher queries: labels, relationship types, property keys,
+    per-label node counts, per-type rel counts, plus sample node and edge queries.
+    Use graph_describe for schema-only (faster). Use graph_explore when you want
+    a complete picture of an unfamiliar graph in one call.
 
     Args:
         params (GraphExploreInput):
