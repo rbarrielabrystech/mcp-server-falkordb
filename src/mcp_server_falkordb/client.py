@@ -95,7 +95,14 @@ class FalkorDBConnection:
 
 @asynccontextmanager
 async def create_falkordb_connection() -> AsyncIterator[FalkorDBConnection]:
-    """Async context manager used as the FastMCP lifespan."""
+    """Async context manager used as the FastMCP lifespan.
+
+    Performs a non-fatal startup probe (``list_graphs`` with a 3-second
+    timeout). If FalkorDB is unreachable, logs a WARNING and continues —
+    tools will fail on their first call with a descriptive error.
+    """
+    import asyncio
+
     cfg = _get_config()
     db = FalkorDB(
         host=cfg["host"],
@@ -103,6 +110,19 @@ async def create_falkordb_connection() -> AsyncIterator[FalkorDBConnection]:
         password=cfg["password"],
     )
     conn = FalkorDBConnection(db, query_timeout_ms=cfg["query_timeout_ms"])
+
+    # Startup probe: attempt list_graphs with a short timeout.
+    # Non-fatal — lazy connection is still valid; early warning helps users.
+    try:
+        await asyncio.wait_for(conn.list_graphs(), timeout=3.0)
+        logger.debug("FalkorDB startup probe succeeded at %s:%d", cfg["host"], cfg["port"])
+    except Exception:
+        logger.warning(
+            "FalkorDB not reachable at %s:%d — tools will fail on first call",
+            cfg["host"],
+            cfg["port"],
+        )
+
     try:
         yield conn
     finally:
