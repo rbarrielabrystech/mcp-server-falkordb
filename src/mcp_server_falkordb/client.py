@@ -6,6 +6,7 @@ Connection details come from environment variables (with defaults).
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -14,6 +15,8 @@ from typing import Any
 from falkordb.asyncio import FalkorDB
 from falkordb.asyncio.graph import Graph
 from falkordb.query_result import QueryResult
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Environment-based configuration
@@ -91,10 +94,11 @@ async def create_falkordb_connection() -> AsyncIterator[FalkorDBConnection]:
     try:
         yield conn
     finally:
-        # FalkorDB async client uses redis.asyncio under the hood;
-        # close the connection pool on shutdown.
+        # FalkorDB async client wraps redis.asyncio; aclose() drains the
+        # underlying connection pool. The `connection_pool` attribute used
+        # previously does not exist on FalkorDB — the AttributeError was
+        # silently swallowed, leaking sockets into TIME_WAIT on every shutdown.
         try:
-            pool: Any = db.connection_pool
-            await pool.aclose()
-        except Exception:
-            pass
+            await db.aclose()
+        except Exception as e:
+            logger.warning("FalkorDB shutdown cleanup failed: %s", e)

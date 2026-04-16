@@ -5,7 +5,7 @@ description = "MCP server for FalkorDB — exposes graph query and management to
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "Labrys Technology", email = "rob@labrys.tech" }]
+authors = [{ name = "Rob Barrie" }]
 keywords = ["mcp", "falkordb", "graph-database", "cypher", "anthropic", "claude", "llm"]
 classifiers = [
     "Development Status :: 4 - Beta",
