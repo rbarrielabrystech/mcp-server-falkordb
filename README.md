@@ -59,7 +59,7 @@ mcp-server-falkordb   # starts on stdio
 ### From source
 
 ```bash
-git clone https://github.com/labrystechnology/mcp-server-falkordb
+git clone https://github.com/rbarrielabrystech/mcp-server-falkordb
 cd mcp-server-falkordb
 uv run mcp-server-falkordb
 ```

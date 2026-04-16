@@ -24,9 +24,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/labrystechnology/mcp-server-falkordb"
-Repository = "https://github.com/labrystechnology/mcp-server-falkordb"
-Issues = "https://github.com/labrystechnology/mcp-server-falkordb/issues"
+Homepage = "https://github.com/rbarrielabrystech/mcp-server-falkordb"
+Repository = "https://github.com/rbarrielabrystech/mcp-server-falkordb"
+Issues = "https://github.com/rbarrielabrystech/mcp-server-falkordb/issues"
 
 [project.scripts]
 mcp-server-falkordb = "mcp_server_falkordb.__main__:main"
