@@ -140,9 +140,7 @@ class TestGraphDescribeIntegration:
 class TestFetchSchemaPerformance:
     """Parallelised _fetch_schema should handle 20+ labels within 500ms locally."""
 
-    async def test_fetch_schema_20_labels_under_500ms(
-        self, falkordb_client: FalkorDB
-    ) -> None:
+    async def test_fetch_schema_20_labels_under_500ms(self, falkordb_client: FalkorDB) -> None:
         # Create a dense test graph with 20 distinct labels
         name = f"_test_mcp_perf_{uuid.uuid4().hex[:8]}"
         graph = falkordb_client.select_graph(name)
@@ -156,9 +154,7 @@ class TestFetchSchemaPerformance:
 
             conn = FalkorDBConnection(falkordb_client)
             start = time.monotonic()
-            labels, rel_types, prop_keys, node_counts, rel_counts = await _fetch_schema(
-                conn, name
-            )
+            labels, rel_types, prop_keys, node_counts, rel_counts = await _fetch_schema(conn, name)
             elapsed = time.monotonic() - start
 
             assert len(labels) == 20

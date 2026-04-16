@@ -59,7 +59,8 @@ class TestToolErrorPaths:
         with patch.object(conn, "query_graph", side_effect=RuntimeError("boom")):
             ctx = _make_ctx(conn)
             result = await graph_describe(
-                GraphDescribeInput(graph="test_graph"), ctx  # type: ignore[arg-type]
+                GraphDescribeInput(graph="test_graph"),
+                ctx,  # type: ignore[arg-type]
             )
         assert isinstance(result, str)
         assert "Error" in result
@@ -97,7 +98,8 @@ class TestToolErrorPaths:
         with patch.object(conn, "query_graph", side_effect=RuntimeError("boom")):
             ctx = _make_ctx(conn)
             result = await graph_explore(
-                GraphExploreInput(graph="test_graph"), ctx  # type: ignore[arg-type]
+                GraphExploreInput(graph="test_graph"),
+                ctx,  # type: ignore[arg-type]
             )
         assert isinstance(result, str)
         assert "Error" in result

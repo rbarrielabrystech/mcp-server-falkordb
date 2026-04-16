@@ -84,9 +84,7 @@ class TestParamsField:
         assert model.params == {"name": "Alice"}
 
     def test_params_accepts_none_explicitly(self) -> None:
-        model = GraphQueryInput(
-            graph="test", query="MATCH (n) RETURN n", params=None
-        )
+        model = GraphQueryInput(graph="test", query="MATCH (n) RETURN n", params=None)
         assert model.params is None
 
     def test_mutate_params_accepts_dict(self) -> None:

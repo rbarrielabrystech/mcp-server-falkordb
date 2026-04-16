@@ -195,7 +195,7 @@ class GraphMutateInput(BaseModel):
         description=(
             "Cypher parameters (optional). Use $name placeholders in the query string. "
             "Example: params={'name': 'Alice', 'age': 30} with "
-            "query=\"CREATE (n:Person {name: $name, age: $age})\""
+            'query="CREATE (n:Person {name: $name, age: $age})"'
         ),
     )
     format: ResponseFormat = Field(
@@ -295,12 +295,8 @@ async def _fetch_schema(
         )
         return int(r2.result_set[0][0]) if r2.result_set else 0
 
-    node_count_values: list[int] = await asyncio.gather(
-        *[_count_nodes(label) for label in labels]
-    )
-    rel_count_values: list[int] = await asyncio.gather(
-        *[_count_rels(rtype) for rtype in rel_types]
-    )
+    node_count_values: list[int] = await asyncio.gather(*[_count_nodes(label) for label in labels])
+    rel_count_values: list[int] = await asyncio.gather(*[_count_rels(rtype) for rtype in rel_types])
 
     node_counts: dict[str, int] = dict(zip(labels, node_count_values, strict=True))
     rel_counts: dict[str, int] = dict(zip(rel_types, rel_count_values, strict=True))
