@@ -24,17 +24,23 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 6379
+DEFAULT_QUERY_TIMEOUT_MS = 30_000
 
 
 def _get_config() -> dict[str, Any]:
     host = os.environ.get("FALKORDB_HOST", DEFAULT_HOST)
     port_str = os.environ.get("FALKORDB_PORT", str(DEFAULT_PORT))
     password = os.environ.get("FALKORDB_PASSWORD", None)
+    timeout_str = os.environ.get("FALKORDB_QUERY_TIMEOUT_MS", str(DEFAULT_QUERY_TIMEOUT_MS))
     try:
         port = int(port_str)
     except ValueError:
         port = DEFAULT_PORT
-    return {"host": host, "port": port, "password": password}
+    try:
+        query_timeout_ms = int(timeout_str)
+    except ValueError:
+        query_timeout_ms = DEFAULT_QUERY_TIMEOUT_MS
+    return {"host": host, "port": port, "password": password, "query_timeout_ms": query_timeout_ms}
 
 
 # ---------------------------------------------------------------------------
@@ -45,8 +51,9 @@ def _get_config() -> dict[str, Any]:
 class FalkorDBConnection:
     """Wraps a single async FalkorDB client, opened at server start."""
 
-    def __init__(self, db: FalkorDB) -> None:
+    def __init__(self, db: FalkorDB, query_timeout_ms: int = DEFAULT_QUERY_TIMEOUT_MS) -> None:
         self._db = db
+        self._query_timeout_ms = query_timeout_ms
 
     async def list_graphs(self) -> list[str]:
         """Return all graph names in the database."""
@@ -65,13 +72,18 @@ class FalkorDBConnection:
         params: dict[str, object] | None = None,
         read_only: bool = True,
     ) -> QueryResult:
-        """Execute a Cypher query against *graph_name*."""
+        """Execute a Cypher query against *graph_name*.
+
+        Applies a timeout of ``FALKORDB_QUERY_TIMEOUT_MS`` milliseconds
+        (default 30 000 ms). Override via the environment variable to allow
+        longer-running analytical queries.
+        """
         graph = self._db.select_graph(graph_name)
         raw: Any
         if read_only:
-            raw = await graph.ro_query(cypher, params=params)
+            raw = await graph.ro_query(cypher, params=params, timeout=self._query_timeout_ms)
         else:
-            raw = await graph.query(cypher, params=params)
+            raw = await graph.query(cypher, params=params, timeout=self._query_timeout_ms)
         result: QueryResult = raw
         return result
 
@@ -90,7 +102,7 @@ async def create_falkordb_connection() -> AsyncIterator[FalkorDBConnection]:
         port=cfg["port"],
         password=cfg["password"],
     )
-    conn = FalkorDBConnection(db)
+    conn = FalkorDBConnection(db, query_timeout_ms=cfg["query_timeout_ms"])
     try:
         yield conn
     finally:

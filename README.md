@@ -105,6 +105,7 @@ Environment variables:
 | `FALKORDB_HOST` | `localhost` | FalkorDB host |
 | `FALKORDB_PORT` | `6379` | FalkorDB port |
 | `FALKORDB_PASSWORD` | _(none)_ | Redis AUTH password (optional) |
+| `FALKORDB_QUERY_TIMEOUT_MS` | `30000` | Query timeout in milliseconds (0 = no timeout) |
 
 ## Usage Examples
 
